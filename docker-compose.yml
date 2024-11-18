@@ -2,6 +2,7 @@ services:
   imagetools:
     build: .
     container_name: image-tools
+    restart: unless-stopped
     environment:
       - NODE_ENV=production
       - BUN_ENV=production

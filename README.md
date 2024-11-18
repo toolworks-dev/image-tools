@@ -1,6 +1,6 @@
 # Image Tools
 
-A web application for converting and resizing images between different formats
+A web application for converting, resizing, and compressing images between different formats
 
 https://imagetools.toolworks.dev
 
@@ -8,6 +8,7 @@ https://imagetools.toolworks.dev
 
 - Convert images
 - Resize images
+- Compress images
 - Scale images by percentage
 - Set custom dimensions
 

@@ -50,6 +50,41 @@ app.post('/api/convert', upload.single('image'), async (req, res) => {
 
       let image = sharp(inputBuffer);
 
+      if (options.compression) {
+        const { type, value } = options.compression;
+        if (type === 'percentage') {
+          const quality = Math.min(100, Math.max(1, value));
+          switch (options.format || file.mimetype.split('/')[1]) {
+            case 'jpeg':
+            case 'jpg':
+              image = image.jpeg({ quality });
+              break;
+            case 'webp':
+              image = image.webp({ quality });
+              break;
+            case 'png':
+              image = image.png({ quality });
+              break;
+          }
+        } else {
+          const targetSize = value * 1024 * 1024;
+          let quality = 100;
+          let buffer;
+          
+          while (quality > 1) {
+            buffer = await image
+              .jpeg({ quality })
+              .toBuffer();
+            
+            if (buffer.length <= targetSize) break;
+            quality = Math.max(1, quality - 5);
+          }
+          
+          image = sharp(buffer);
+        }
+      }
+  
+
       if (options.width || options.height) {
         image = image.resize(options.width, options.height, {
           fit: 'contain',

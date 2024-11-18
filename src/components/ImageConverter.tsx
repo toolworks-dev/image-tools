@@ -42,8 +42,11 @@ interface ConversionOptions {
   format: string;
   width?: number;
   height?: number;
+  compression?: {
+    type: 'size' | 'percentage';
+    value: number;
+  };
 }
-
 const getNewFilename = (
   originalFile: string,
   newExtension?: string,
@@ -59,7 +62,9 @@ const getNewFilename = (
 };
 
 const ImageConverter: React.FC = () => {
-  const [mode, setMode] = useState<'convert' | 'resize'>('convert');
+  const [mode, setMode] = useState<'convert' | 'resize' | 'compress'>('convert');
+  const [compressionType, setCompressionType] = useState<'size' | 'percentage'>('percentage');
+  const [compressionValue, setCompressionValue] = useState<number>(80);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -144,7 +149,11 @@ const ImageConverter: React.FC = () => {
     formData.append('options', JSON.stringify({
       ...options,
       width: options.width || undefined,
-      height: options.height || undefined
+      height: options.height || undefined,
+      compression: mode === 'compress' ? {
+        type: compressionType,
+        value: compressionValue
+      } : undefined  
     }));
   
     try {
@@ -303,6 +312,49 @@ const ImageConverter: React.FC = () => {
     </Grid>
   );
 
+  const CompressionControls = () => (
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <FormControl fullWidth>
+          <InputLabel>Compression Type</InputLabel>
+          <Select
+            value={compressionType}
+            label="Compression Type"
+            onChange={(e) => setCompressionType(e.target.value as 'size' | 'percentage')}
+          >
+            <MenuItem value="percentage">Quality Percentage</MenuItem>
+            <MenuItem value="size">Target Size (MB)</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12}>
+        <TextField
+          type="number"
+          label={compressionType === 'percentage' ? 'Quality %' : 'Size (MB)'}
+          fullWidth
+          value={compressionValue}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (compressionType === 'percentage') {
+              if (value >= 1 && value <= 100) {
+                setCompressionValue(value);
+              }
+            } else {
+              if (value > 0) {
+                setCompressionValue(value);
+              }
+            }
+          }}
+          inputProps={{
+            min: compressionType === 'percentage' ? 1 : 0.1,
+            max: compressionType === 'percentage' ? 100 : 100,
+            step: compressionType === 'percentage' ? 1 : 0.1
+          }}
+        />
+      </Grid>
+    </Grid>
+  );
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -316,6 +368,7 @@ const ImageConverter: React.FC = () => {
           >
             <ToggleButton value="convert">Convert Format</ToggleButton>
             <ToggleButton value="resize">Resize Image</ToggleButton>
+            <ToggleButton value="compress">Compress Image</ToggleButton>
           </ToggleButtonGroup>
         </Grid>
 
@@ -338,6 +391,12 @@ const ImageConverter: React.FC = () => {
             />
           </Button>
         </Grid>
+
+        {mode === 'compress' && (
+          <Grid item xs={12}>
+            <CompressionControls />
+          </Grid>
+        )}
 
         {mode === 'convert' && (
           <Grid item xs={12}>

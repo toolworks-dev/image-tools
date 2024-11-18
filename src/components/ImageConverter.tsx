@@ -32,6 +32,12 @@ const ACCEPTED_TYPES = {
   'image/heic': ['.heic'],
 };
 
+declare global {
+  interface Window {
+    plausible?: (eventName: string, options?: { props?: Record<string, string> }) => void;
+  }
+}
+
 interface ConversionOptions {
   format: string;
   width?: number;
@@ -57,8 +63,8 @@ const ImageConverter: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle'); // Fixed
-  const [errorMessage, setErrorMessage] = useState<string>(''); // Fixed
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [options, setOptions] = useState<ConversionOptions>({
     format: 'png',
     width: undefined,
@@ -125,11 +131,14 @@ const ImageConverter: React.FC = () => {
   : '/api';
 
   const handleConvert = async () => {
-    if (!selectedFile) return;
-
+    if (!selectedFile) {
+      setError('Please select a file first');
+      return;
+    }
+    
     setStatus('idle');
     setErrorMessage('');
-
+  
     const formData = new FormData();
     formData.append('image', selectedFile);
     formData.append('options', JSON.stringify({
@@ -137,7 +146,7 @@ const ImageConverter: React.FC = () => {
       width: options.width || undefined,
       height: options.height || undefined
     }));
-
+  
     try {
       const response = await fetch(`${API_URL}/convert`, {
         method: 'POST',
@@ -146,7 +155,9 @@ const ImageConverter: React.FC = () => {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorMessage = `HTTP error! status: ${response.status}`;
+        setError(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const blob = await response.blob();
@@ -158,7 +169,15 @@ const ImageConverter: React.FC = () => {
         options.width,
         options.height
       );
-
+  
+      window.plausible?.('imageDownload', {
+        props: {
+          sourceFormat: selectedFile.type,
+          targetFormat: options.format,
+          hasResize: (options.width && options.height) ? 'true' : 'false'
+        }
+      });
+  
       const link = document.createElement('a');
       link.href = url;
       link.download = newFilename;
@@ -204,7 +223,7 @@ const ImageConverter: React.FC = () => {
                   inputMode: 'numeric',
                   pattern: '[0-9]*'
                 }}
-                value={scaleInput || scale.toString()} // Use scale as fallback
+                value={scaleInput || scale.toString()}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value === '' || (Number(value) >= 0 && Number(value) <= 9999)) {
@@ -410,6 +429,11 @@ const ImageConverter: React.FC = () => {
           {errorMessage}
         </Alert>
       </Snackbar>
+      <Box sx={{ mt: 4, textAlign: 'center', color: 'text.secondary' }}>
+        <Typography variant="body2">
+          Made by Toolworks.dev • <a href="https://github.com/toolworks-dev/image-tools" style={{color: 'inherit'}}>GitHub</a>
+        </Typography>
+      </Box>
     </Box>
   );
 };

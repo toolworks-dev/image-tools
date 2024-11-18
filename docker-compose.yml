@@ -1,0 +1,18 @@
+services:
+  imagetools:
+    build: .
+    container_name: image-tools
+    environment:
+      - NODE_ENV=production
+      - BUN_ENV=production
+    ports:
+      - "3355:3355"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    networks:
+      - imagetools-network
+
+networks:
+  imagetools-network:
+    driver: bridge
